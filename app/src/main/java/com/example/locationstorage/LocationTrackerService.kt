@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 
 var globalRoute = mutableListOf<RoutePoint>()
 var globalLines = mutableListOf<RouteLine>()
+var numberOfRoutes = 0
 
 data class RouteLine(val lat1: Double, val lon1: Double, val lat2: Double, val lon2: Double){
 
@@ -67,26 +68,45 @@ class LocationTrackerService: Service() {
             .setStyle(NotificationCompat.BigTextStyle())
 
         startForeground(1, notification.build())
-
+        var lastPoint = RoutePoint(0.0,0.0,0)
+        var currentRoute = mutableListOf<RoutePoint>()
+        var pointsWithoutMoving = 0
         scope.launch {
             locationManager.trackLocation().collect {location ->
-                val latitude = location.latitude.toString()
-                val longitude = location.longitude.toString()
-                val time = location.time
-
-               applicationContext.openFileOutput("routes.txt",Context.MODE_APPEND).use{
-                   it.write("$latitude,$longitude,$time\n".toByteArray())
-               }
-
-                applicationContext.openFileOutput("newResult.txt",Context.MODE_APPEND).use{
-                    it.write("$latitude,$longitude,$time\n".toByteArray())
+                val thisPoint = RoutePoint(location.latitude,location.longitude,location.time)
+                if (!thisPoint.isEqualTo(lastPoint)) {
+                    applicationContext.openFileOutput("main.txt", Context.MODE_APPEND).use {
+                        it.write("${thisPoint.latitude},${thisPoint.longitude},${thisPoint.timeInUNIX}\n".toByteArray())
+                    }
+                    lastPoint = thisPoint
                 }
+                if(currentRoute.isEmpty())
+                    currentRoute.add(thisPoint)
+                else {
+                    if (currentRoute.last().isEqualTo(thisPoint)) {
+                        if (currentRoute.size == 1)
+                            currentRoute[0] = thisPoint
+                        else{
+                            pointsWithoutMoving++
+                        }
+                    }
+                    else {
+                        currentRoute.add(thisPoint)
+                        pointsWithoutMoving = 0
+                    }
+                }
+
+                if (pointsWithoutMoving>10){
+                    numberOfRoutes++
+                    writeRoute(currentRoute.listIterator())
+                }
+
 
 
                 notificationManager.notify(
                     1,
                     notification.setContentText(
-                        "Location: ..$latitude / ..$longitude"
+                        "Location: ..${thisPoint.latitude} / ..${thisPoint.longitude}"
                     ).build()
                 )
 
@@ -230,6 +250,17 @@ class LocationTrackerService: Service() {
             }
         }
         return false
+    }
+    fun writeRoute(route: MutableListIterator<RoutePoint>){
+        applicationContext.openFileOutput("savedRoutes.txt", Context.MODE_APPEND).use {
+            it.write("Route_$numberOfRoutes\n1,0,0\n".toByteArray())
+            route.forEach { thisPoint ->
+
+                it.write("${thisPoint.latitude},${thisPoint.longitude},${thisPoint.timeInUNIX}\n".toByteArray())
+                }
+            it.write("End\n\n".toByteArray())
+        }
+
     }
     override fun onDestroy() {
         super.onDestroy()

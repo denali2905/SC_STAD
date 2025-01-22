@@ -43,8 +43,6 @@ import java.util.Date
 import java.util.TimeZone
 import kotlin.math.round
 
-typealias routePoint = Triple<Double,Double,Long>
-typealias route = MutableList<Triple<Double,Double,Long>>
 
 data class RoutePoint(val latitude:Double,val longitude:Double, val timeInUNIX: Long)
 {
@@ -53,7 +51,12 @@ data class RoutePoint(val latitude:Double,val longitude:Double, val timeInUNIX: 
         temp.timeInMillis=timeInUNIX
         return temp
     }
-    
+
+    fun isEqualTo(nextPoint: RoutePoint): Boolean{
+        val latDiff = latitude-nextPoint.latitude
+        val lonDiff = longitude-nextPoint.longitude
+        return !((latDiff>0.001 || latDiff<-0.001)||lonDiff>0.001||lonDiff<-0.001)
+    }
 
 }
 var globalRouteName = ""
@@ -160,10 +163,16 @@ class MainActivity : ComponentActivity() {
 
             Button(
                 onClick = {
-                     nameRoute()
+                    Intent(
+                        applicationContext, LocationTrackerService::class.java
+                    ).also {
+                        it.action = LocationTrackerService.Action.START.name
+                        startService(it)
 
-                }
-            ) {
+
+                    }
+                })
+             {
                 Text(text = "Start Tracking")
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -265,7 +274,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun printLocations() : String {
-        applicationContext.openFileInput("routes.txt").bufferedReader().use { output ->
+        applicationContext.openFileInput("main.txt").bufferedReader().use { output ->
             return output.readText()
         }
     }
@@ -348,14 +357,14 @@ class MainActivity : ComponentActivity() {
         return out
     }
 
-    private fun CompareRoutes()
-    {
-        var tempRoute  = mutableListOf<routePoint>()
-        var lastRoutePoint: routePoint = Triple(0.0,0.0,0)
-        applicationContext.openFileInput("newResult.txt").bufferedReader().forEachLine {
-            val point = it.split(",")}
-
-    }
+//    private fun CompareRoutes()
+//    {
+//        var tempRoute  = mutableListOf<routePoint>()
+//        var lastRoutePoint: routePoint = Triple(0.0,0.0,0)
+//        applicationContext.openFileInput("newResult.txt").bufferedReader().forEachLine {
+//            val point = it.split(",")}
+//
+//    }
 
 
     private fun nameRoute() {
