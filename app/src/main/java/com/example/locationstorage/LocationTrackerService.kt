@@ -227,6 +227,10 @@ class LocationTrackerService: Service() {
                         pointsOnRoute.add(0)
                         currentRoute = mutableListOf()
                     }
+                    for(i in 0..<savedRoutes.size){
+                        sameStartingPoint[i] = false
+                        pointsOnRoute[i] = 0
+                    }
                     saveRoute = true
                     pointsWithoutMoving = 0
                     pointsNotFound = 0
