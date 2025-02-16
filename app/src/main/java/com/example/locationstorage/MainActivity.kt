@@ -5,9 +5,12 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.telephony.SmsManager
 import android.text.InputType
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,7 +47,7 @@ import java.util.TimeZone
 import kotlin.math.round
 
 
-data class RoutePoint(val latitude:Double,val longitude:Double, val timeInUNIX: Long)
+data class RoutePoint(val latitude:Double,val longitude:Double, var timeInUNIX: Long)
 {
     fun time(): Calendar{
         val temp = Calendar.getInstance(TimeZone.getDefault())
@@ -97,6 +100,13 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(this, "No Notification access", Toast.LENGTH_SHORT).show()
                 }
             }
+            when{
+                permissions.getOrDefault(Manifest.permission.SEND_SMS, false)
+                    -> { Toast.makeText(this, "SMS access granted", Toast.LENGTH_SHORT).show() }
+                else -> {
+                    Toast.makeText(this, "No SMS access", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,7 +118,8 @@ class MainActivity : ComponentActivity() {
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.POST_NOTIFICATIONS
+                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.SEND_SMS
             )
         )
 
@@ -144,6 +155,12 @@ class MainActivity : ComponentActivity() {
             var linesComposable by remember {
                 mutableStateOf("routeName")
             }
+
+            var emergencyContacts by remember {
+                mutableStateOf("routeName")
+            }
+
+            var point by remember { mutableStateOf(Pair(0.0,0.0)) }
 
             Text(text = locationText)
 
@@ -193,6 +210,46 @@ class MainActivity : ComponentActivity() {
 
             Button(
                 onClick = {
+
+                    sendAlert()
+                }
+            ) {
+                Text(text = "Send Alert")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    addEmergencyContact()
+                }
+            ) {
+                Text(text = "Add Emergency Contact")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = emergencyContacts)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    clearEmergencyContacts()
+                }
+            ) {
+                Text(text = "Clear Emergency Contact")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    emergencyContacts = printEmergencyContacts()
+                }
+            ) {
+                Text(text = "Print contacts")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
                     chooseRoute()
                 }
             ) {
@@ -223,7 +280,7 @@ class MainActivity : ComponentActivity() {
 
             Button(
                 onClick = {
-                    routes = printRoute()
+                    routes = printRoutesNew()
 
                 }
             ) {
@@ -250,6 +307,8 @@ class MainActivity : ComponentActivity() {
             Text(text = linesComposable)
         }
     }
+
+
 
     private fun createLocationRequest() {
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000)
@@ -279,6 +338,58 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun printRoutesNew() : String {
+        applicationContext.openFileInput("savedRoutes.txt").bufferedReader().use { output ->
+            return output.readText()
+        }
+    }
+
+    private fun printEmergencyContacts() : String {
+        applicationContext.openFileInput("EmergencyContacts.txt").bufferedReader().use { output ->
+            return output.readText()
+        }
+    }
+    private fun clearEmergencyContacts(){
+        applicationContext.openFileOutput("EmergencyContacts.txt",Context.MODE_PRIVATE).use{
+            it.write("".toByteArray())
+        }
+    }
+
+    private fun readEmergencyContacts() : MutableList<EmergencyContact> {
+        val contacts = mutableListOf<EmergencyContact>()
+        val file = File(filesDir,"EmergencyContacts.txt")
+        if (file.exists()) {
+            applicationContext.openFileInput("EmergencyContacts.txt").bufferedReader().forEachLine {
+                val contact = it.split(",")
+                contacts.add(EmergencyContact(contact[0],contact[1]))
+            }
+
+        }
+        return contacts
+    }
+
+    private fun sendAlert(){
+        val smsManager: SmsManager = this.getSystemService(SmsManager::class.java)
+        val contacts = readEmergencyContacts()
+
+        locationManager.getLocation {lat, lon ->
+                for (contact in contacts) {
+                    val message = arrayListOf( "ATTENTION ${contact.name}, I may be in danger...\n Please reach out to me\n",
+                     "I am here -> https://www.google.com/maps/search/?api=1&query=$lat,$lon")
+
+                    smsManager.sendMultipartTextMessage(contact.number,null,message,null,null)
+
+                    Toast.makeText(this, "Messages sent", Toast.LENGTH_SHORT).show()
+                }
+        }
+
+
+
+
+
+
+    }
+
     private fun clearLocations(){
 
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
@@ -286,10 +397,10 @@ class MainActivity : ComponentActivity() {
             .setMessage("Data will be permanently lost")
             .setTitle("Are you sure?")
             .setPositiveButton("Yes") { dialog, which ->
-                applicationContext.openFileOutput("routes.txt",Context.MODE_PRIVATE).use{
+                applicationContext.openFileOutput("main.txt",Context.MODE_PRIVATE).use{
                     it.write("".toByteArray())
                 }
-                applicationContext.openFileOutput("routeNames.txt",Context.MODE_PRIVATE).use{
+                applicationContext.openFileOutput("savedRoutes.txt",Context.MODE_PRIVATE).use{
                     it.write("".toByteArray())
                 }
             }
@@ -366,7 +477,38 @@ class MainActivity : ComponentActivity() {
 //
 //    }
 
+    private fun addEmergencyContact(){
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        val nameInput = EditText(this)
+        val phoneNumberInput = EditText(this)
+        var userConfirmation = false
 
+        nameInput.inputType = InputType.TYPE_CLASS_TEXT
+        nameInput.hint = "Name"
+        phoneNumberInput.inputType = InputType.TYPE_CLASS_PHONE
+        phoneNumberInput.hint = "Phone Number"
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.addView(nameInput)
+        layout.addView(phoneNumberInput)
+        builder
+            .setTitle("Add Emergency Contact")
+            .setView(layout)
+            .setPositiveButton("Confirm") { _,_ ->
+
+
+                applicationContext.openFileOutput("EmergencyContacts.txt",Context.MODE_APPEND).use{
+                    it.write("${nameInput.text},${phoneNumberInput.text}\n".toByteArray())
+                }
+
+            }
+            .setNegativeButton("Cancel") { dialog, which ->
+
+            }
+
+        val dialog: AlertDialog = builder.create()
+        dialog.show()
+    }
     private fun nameRoute() {
 
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)

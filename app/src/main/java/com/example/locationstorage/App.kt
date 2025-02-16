@@ -22,7 +22,7 @@ class App: Application() {
             val channelTwo = NotificationChannel(
                 LocationTrackerService.LOCATION_CHANNEL_2,
                 "No File",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             )
 
             val notificationManager =
