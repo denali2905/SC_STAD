@@ -42,7 +42,7 @@ class LocationManager (
                 }
             }
             val request = LocationRequest
-                .Builder(10000)
+                .Builder(20000)
                 .build()
 
             fusedLocationClient.requestLocationUpdates(

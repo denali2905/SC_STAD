@@ -19,6 +19,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.Calendar
+import java.util.TimeZone
 
 var globalRoute = mutableListOf<RoutePoint>()
 var globalLines = mutableListOf<RouteLine>()
@@ -26,11 +28,26 @@ var numberOfRoutes = 0
 var notificationSent = false
 var sendAlertNow = false
 
-data class RouteLine(val lat1: Double, val lon1: Double, val lat2: Double, val lon2: Double){
+
+data class RouteLine(val lat1: Double, val lon1: Double, val lat2: Double, val lon2: Double,val timeFromStart:Long,val timeInUNIX:Long){
 
     val m = (lon1 - lon2) / (lat1 - lat2)
 
     val c = lon1 - (m * lat1)
+
+    private fun time(): Calendar{
+        val temp = Calendar.getInstance(TimeZone.getDefault())
+        temp.timeInMillis=timeInUNIX
+        return temp
+    }
+
+    val day = time().get(Calendar.DAY_OF_WEEK)
+
+    val hour = time().get(Calendar.HOUR_OF_DAY)
+
+    val minute = time().get(Calendar.MINUTE)
+
+    val timeInMinutes = hour*60+minute
 
 }
 
@@ -39,7 +56,7 @@ data class EmergencyContact(val name: String,val number: String)
 class LocationTrackerService: Service() {
 
     // private var savedRoutes : MutableList<MutableList<RoutePoint>> = mutableListOf()
-    var lastLocation = null
+    private var routeError = mutableListOf<Int>()
     private var savedRoutesInfo = mutableListOf<Triple<Int,Int,Int>>()
     private var bundle: Bundle? =null
     private val scope = CoroutineScope(
@@ -113,7 +130,10 @@ class LocationTrackerService: Service() {
         numberOfRoutes = savedRoutes.size
         val savedLines : MutableList<MutableList<RouteLine>> = mutableListOf()
         val sameStartingPoint = mutableListOf<Boolean>()
+        val sameDay = mutableListOf<Boolean>()
+        val sameHour = mutableListOf<Boolean>()
         val pointsOnRoute = mutableListOf<Int>()
+        routeError = mutableListOf()
         var pointFound = false
         var pointsNotFound = 0
         var saveRoute = true
@@ -124,7 +144,10 @@ class LocationTrackerService: Service() {
                 val iterator = route.listIterator()
                 savedLines.add(routeToLines(iterator))
                 sameStartingPoint.add(false)
+                sameDay.add(false)
+                sameHour.add(false)
                 pointsOnRoute.add(0)
+                routeError.add(0)
             }
         }
 
@@ -149,22 +172,54 @@ class LocationTrackerService: Service() {
 
                 if(currentRoute.isEmpty()) {
                     currentRoute.add(thisPoint)
+                    val isWeekday = currentRoute[0].day in 2..5
                     for (route in savedRoutes)
                     {
                         if (route[0].isEqualTo(thisPoint))
                             sameStartingPoint[savedRoutes.indexOf(route)]=true
+                        if (isWeekday) {
+                            if (route[0].day in 2..5) {
+                                sameDay[savedRoutes.indexOf(route)] = true
+                                sameHour[savedRoutes.indexOf(route)] = currentRoute[0].hour in route[0].hour-1..route[0].hour+1
+                            }
+                        }
+                        else {
+                            if (route[0].day == 1 ||route[0].day ==  6||route[0].day ==  7) {
+                                sameDay[savedRoutes.indexOf(route)] = true
+                                sameHour[savedRoutes.indexOf(route)] =
+                                    currentRoute[0].hour in route[0].hour - 1..route[0].hour + 1
+                            }
+                        }
                     }
                 }
                 else {
                     if (currentRoute.last().isEqualTo(thisPoint)) {
-                        if (currentRoute.size == 1)
+                        if (currentRoute.size == 1) {
                             currentRoute[0].timeInUNIX = thisPoint.timeInUNIX
+                            val isWeekday = currentRoute[0].day in 2..5
+                            for (route in savedRoutes)
+                            {
+                                if (isWeekday) {
+                                    if (route[0].day in 2..5) {
+                                        sameDay[savedRoutes.indexOf(route)] = true
+                                        sameHour[savedRoutes.indexOf(route)] = currentRoute[0].hour in route[0].hour-1..route[0].hour+1
+                                    }
+                                }
+                                else {
+                                    if (route[0].day == 1 or 6 or 7){
+                                        sameDay[savedRoutes.indexOf(route)] = true
+                                        sameHour[savedRoutes.indexOf(route)] = currentRoute[0].hour in route[0].hour - 1..route[0].hour + 1
+                                }
+                                }
+                            }
+                        }
                         else{
                             pointsWithoutMoving++
                             if(savedRoutes.isNotEmpty())
                             {
-                                if (!pointFound)
-                                    pointsNotFound++
+                                if (currentRoute.size>5)
+                                    if (!pointFound)
+                                        pointsNotFound++
                             }
                         }
                     }
@@ -173,13 +228,13 @@ class LocationTrackerService: Service() {
                         pointsWithoutMoving = 0
                         if (savedRoutes.isNotEmpty()) {
                             for (i in 0..<savedRoutes.size) {
-                                //if (sameStartingPoint[i]) {
+                                if (sameDay[i]) {
                                     val iterator = savedLines[i].listIterator()
-                                    if (onLine(thisPoint, iterator)) {
+                                    if (onLine(thisPoint, iterator,currentRoute[0].timeInUNIX,sameHour[i],i)) {
                                         pointsOnRoute[i]++
                                         pointFound = true
                                     }
-                                //}
+                                }
                             }
                             if (!pointFound)
                                 pointsNotFound++
@@ -191,7 +246,7 @@ class LocationTrackerService: Service() {
 
                     }
                 }
-                if(pointsNotFound>15 && !notificationSent && !isSafe)
+                if(pointsNotFound>20 && !notificationSent && !isSafe && snoozeTime<=0)
                 {
                     notificationManager.notify(2,
                         notificationTwo.setContentText("Are you okay?").build())
@@ -203,13 +258,16 @@ class LocationTrackerService: Service() {
                     {
                         saveRoute = true
                         pointsNotSafe = 0
+                        pointsNotFound=0
+                        pointFound=true
+                        notificationSent = false
                     }
                     else
                         pointsNotSafe ++
 
                 }
 
-                if(pointsNotSafe>30)
+                if(pointsNotSafe>30 && snoozeTime<=0)
                 {
                     sendAlert(thisPoint.latitude,thisPoint.longitude)
                     pointsNotSafe = 0
@@ -219,22 +277,26 @@ class LocationTrackerService: Service() {
                 if (pointsWithoutMoving>30){
                     if (saveRoute){
                         numberOfRoutes++
-                        writeRoute(currentRoute.listIterator())
+                        writeRoute(currentRoute.listIterator(),currentRoute[0].time())
                         savedRoutes.add(currentRoute)
                         val iterator = currentRoute.listIterator()
                         savedLines.add(routeToLines(iterator))
                         sameStartingPoint.add(false)
+                        sameDay.add(false)
+                        sameHour.add(false)
                         pointsOnRoute.add(0)
+                        routeError.add(0)
                         currentRoute = mutableListOf()
                     }
                     for(i in 0..<savedRoutes.size){
                         sameStartingPoint[i] = false
                         pointsOnRoute[i] = 0
+                        routeError[i]=0
                     }
                     saveRoute = true
                     pointsWithoutMoving = 0
                     pointsNotFound = 0
-                    isSafe = false
+                    isSafe=false
                 }
 
 
@@ -326,7 +388,7 @@ class LocationTrackerService: Service() {
 
                 val point = RoutePoint(location.latitude,location.longitude,location.time)
                 val linesIterator = routeAsLines.iterator()
-                val onLine = onLine(point,linesIterator)
+                val onLine = onLine(point,linesIterator,0,false,0)
                 if (onLine)
                     notificationManager.notify(2,notificationTwo.setContentText("On Safe Route").build())
                 else
@@ -414,10 +476,14 @@ class LocationTrackerService: Service() {
 
         var point =  RoutePoint(0.0,0.0,0)
         var pointTwo : RoutePoint
+        var startingPoint = RoutePoint(0.0,0.0,0)
         while(route.hasNext())
         {
-            if (route.nextIndex() == 0)
-                point = route.next()
+            if (route.nextIndex() == 0) {
+                startingPoint = route.next()
+                point = startingPoint
+
+            }
             pointTwo = route.next()
 
             val lat1 = point.latitude
@@ -427,14 +493,15 @@ class LocationTrackerService: Service() {
             val latDifference = lat1 -lat2
             val lonDifference = lon1 - lon2
             if ((latDifference > 0.00001 || latDifference < -0.00001) || (lonDifference > 0.00001 || lonDifference < -0.00001)) {
-
-                lines.add(RouteLine(lat1,lon1,lat2,lon2))
+                val timeFromStart = pointTwo.timeInUNIX - startingPoint.timeInUNIX
+                val time = (point.timeInUNIX+pointTwo.timeInUNIX)/2
+                lines.add(RouteLine(lat1,lon1,lat2,lon2,timeFromStart,time))
                 point = pointTwo
             }
         }
         return lines
     }
-    private fun onLine(point: RoutePoint,lines : MutableIterator<RouteLine>) : Boolean
+    private fun onLine(point: RoutePoint,lines : MutableIterator<RouteLine>,routeStartTime: Long,sameRouteStartHour:Boolean,routeIndex:Int) : Boolean
     {
         lines.forEach{
             val c = point.longitude - it.m*point.latitude
@@ -442,14 +509,55 @@ class LocationTrackerService: Service() {
             {
                 if((point.latitude in it.lat1-0.0015..it.lat2+0.0015) || (point.latitude in it.lat2-0.0015..it.lat1+0.0015))
                     if ((point.longitude in it.lon1-0.0015..it.lon2+0.0015) || (point.longitude in it.lon2-0.0015..it.lon1+0.0015))
-                        return true
+                        if(sameRouteStartHour) {
+                            if ((point.timeInUNIX - routeStartTime+routeError[routeIndex]) in it.timeFromStart - 900000..it.timeFromStart + 900000) {
+                                routeError[routeIndex]= ((it.timeFromStart-(point.timeInUNIX-routeStartTime))/60000).toInt()
+                                return true
+                            }
+                        }
+                        if (it.timeInMinutes+routeError[routeIndex] in 15..1424) {
+                            if (point.timeInMinutes in it.timeInMinutes - 15..it.timeInMinutes + 15){
+                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes
+                                return true
+                            }
+                        }
+                        else if(it.timeInMinutes<15)
+                        {
+                            if ((point.timeInMinutes+routeError[routeIndex] in (it.timeInMinutes - 15+1440)..1439))
+                            {
+                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes+1440
+                                return true
+                            }
+                            else if((point.timeInMinutes+routeError[routeIndex] in 0..it.timeInMinutes + 15))
+                            {
+                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes
+                                return true
+                            }
+                        }
+                        else
+                        {
+                            if ((point.timeInMinutes in it.timeInMinutes - 15..1439) )
+                            {
+                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes
+                                return true
+                            }
+                            else if((point.timeInMinutes in 0..(it.timeInMinutes + 15)%1440))
+                            {
+                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes-1440
+                                return true
+                            }
+                        }
+
             }
         }
         return false
     }
-    private fun writeRoute(route: MutableListIterator<RoutePoint>){
+    private fun writeRoute(route: MutableListIterator<RoutePoint>,startPointTime: Calendar){
         applicationContext.openFileOutput("savedRoutes.txt", Context.MODE_APPEND).use {
-            it.write("Route_$numberOfRoutes\n1,0,0\n".toByteArray())
+            val day = startPointTime.get(Calendar.DAY_OF_WEEK)
+            val hour = startPointTime.get(Calendar.HOUR_OF_DAY)
+            val minute = startPointTime.get(Calendar.MINUTE)
+            it.write("Route_$numberOfRoutes\n$day,$hour,$minute\n".toByteArray())
             route.forEach { thisPoint ->
 
                 it.write("${thisPoint.latitude},${thisPoint.longitude},${thisPoint.timeInUNIX}\n".toByteArray())

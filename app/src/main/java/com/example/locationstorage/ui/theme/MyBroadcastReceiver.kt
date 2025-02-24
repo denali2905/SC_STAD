@@ -16,7 +16,7 @@ class MyBroadcastReceiver : BroadcastReceiver() {
             isSafe = true
             Toast.makeText(context, "Nice to hear.", Toast.LENGTH_SHORT)
                 .show()
-            notificationSent = false
+
         }
         else if (intent?.action=="not safe")
         {

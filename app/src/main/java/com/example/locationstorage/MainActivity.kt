@@ -9,8 +9,13 @@ import android.os.Build
 import android.os.Bundle
 import android.telephony.SmsManager
 import android.text.InputType
+import android.text.Layout
+import android.view.Gravity
+import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.NumberPicker
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.location.LocationManagerCompat.isLocationEnabled
 import com.example.locationstorage.ui.theme.LocationStorageTheme
@@ -46,7 +52,7 @@ import java.util.Date
 import java.util.TimeZone
 import kotlin.math.round
 
-
+var snoozeTime : Long = 0
 data class RoutePoint(val latitude:Double,val longitude:Double, var timeInUNIX: Long)
 {
     fun time(): Calendar{
@@ -54,6 +60,14 @@ data class RoutePoint(val latitude:Double,val longitude:Double, var timeInUNIX: 
         temp.timeInMillis=timeInUNIX
         return temp
     }
+
+    val day = time().get(Calendar.DAY_OF_WEEK)
+
+    val hour = time().get(Calendar.HOUR_OF_DAY)
+
+    val minute = time().get(Calendar.MINUTE)
+
+    val timeInMinutes = hour*60+minute
 
     fun isEqualTo(nextPoint: RoutePoint): Boolean{
         val latDiff = latitude-nextPoint.latitude
@@ -245,6 +259,15 @@ class MainActivity : ComponentActivity() {
                 }
             ) {
                 Text(text = "Print contacts")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    snoozeAlerts()
+                }
+            ) {
+                Text(text = "Snooze Alerts")
             }
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -500,6 +523,75 @@ class MainActivity : ComponentActivity() {
                 applicationContext.openFileOutput("EmergencyContacts.txt",Context.MODE_APPEND).use{
                     it.write("${nameInput.text},${phoneNumberInput.text}\n".toByteArray())
                 }
+
+            }
+            .setNegativeButton("Cancel") { dialog, which ->
+
+            }
+
+        val dialog: AlertDialog = builder.create()
+        dialog.show()
+    }
+
+    private fun snoozeAlerts(){
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+
+
+        val dayPicker = NumberPicker(this)
+        val hourPicker = NumberPicker(this)
+        val minutePicker = NumberPicker(this)
+
+        val days = snoozeTime/4320
+        var remainder = snoozeTime%4320
+        dayPicker.maxValue = 30
+        dayPicker.minValue = 0
+        dayPicker.wrapSelectorWheel = true
+        dayPicker.value = days.toInt()
+        dayPicker.setPadding(5,10,20,10)
+
+        val hours = remainder/180
+        remainder %= 180
+        hourPicker.maxValue = 24
+        hourPicker.minValue = 0
+        hourPicker.wrapSelectorWheel = true
+        hourPicker.value = hours.toInt()
+        hourPicker.setPadding(5,10,20,10)
+
+        val minutes= remainder/3
+        minutePicker.maxValue = 60
+        minutePicker.minValue = 0
+        minutePicker.wrapSelectorWheel = true
+        minutePicker.value = minutes.toInt()
+        minutePicker.setPadding(5,10,20,10)
+        val dayText = TextView(this)
+        dayText.text = "Days: "
+       // dayText.gravity=Gravity.CENTER_VERTICAL
+        val hoursText = TextView(this)
+        hoursText.text = "Hours: "
+     //   hoursText.setPadding(20,20,10,20)
+        //hoursText.textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+        //hoursText.gravity=Gravity.CENTER_VERTICAL
+        val minuteText = TextView(this)
+        minuteText.text = "Minutes: "
+        //minuteText.setPadding(20,20,10,20)
+        //minuteText.textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+        //minuteText.gravity=Gravity.CENTER_VERTICAL
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.HORIZONTAL
+        layout.addView(dayText)
+        layout.addView(dayPicker)
+        layout.addView(hoursText)
+        layout.addView(hourPicker)
+        layout.addView(minuteText)
+        layout.addView(minutePicker)
+     //   layout.textAlignment= View.TEXT_ALIGNMENT_CENTER
+        layout.gravity = Gravity.CENTER
+        builder
+            .setTitle("Specify Snooze Time")
+            .setView(layout)
+            .setPositiveButton("Confirm") { _,_ ->
+
+                snoozeTime = ((dayPicker.value*4320)+(hourPicker.value*180)+(minutePicker.value*3)).toLong()
 
             }
             .setNegativeButton("Cancel") { dialog, which ->
