@@ -175,19 +175,19 @@ class LocationTrackerService: Service() {
 
                 if(currentRoute.isEmpty()) {
                     currentRoute.add(thisPoint)
-                    val isWeekday = currentRoute[0].day in 2..5
+                    val isWeekday = currentRoute[0].day in 2..6
                     for (route in savedRoutes)
                     {
                         if (route[0].isEqualTo(thisPoint))
                             sameStartingPoint[savedRoutes.indexOf(route)]=true
                         if (isWeekday) {
-                            if (route[0].day in 2..5) {
+                            if (route[0].day in 2..6) {
                                 sameDay[savedRoutes.indexOf(route)] = true
                                 sameHour[savedRoutes.indexOf(route)] = currentRoute[0].hour in route[0].hour-1..route[0].hour+1
                             }
                         }
                         else {
-                            if (route[0].day == 1 ||route[0].day ==  6||route[0].day ==  7) {
+                            if (route[0].day == 1 || route[0].day == 7) {
                                 sameDay[savedRoutes.indexOf(route)] = true
                                 sameHour[savedRoutes.indexOf(route)] =
                                     currentRoute[0].hour in route[0].hour - 1..route[0].hour + 1
@@ -199,17 +199,17 @@ class LocationTrackerService: Service() {
                     if (currentRoute.last().isEqualTo(thisPoint)) {
                         if (currentRoute.size == 1) {
                             currentRoute[0].timeInUNIX = thisPoint.timeInUNIX
-                            val isWeekday = currentRoute[0].day in 2..5
+                            val isWeekday = currentRoute[0].day in 2..6
                             for (route in savedRoutes)
                             {
                                 if (isWeekday) {
-                                    if (route[0].day in 2..5) {
+                                    if (route[0].day in 2..6) {
                                         sameDay[savedRoutes.indexOf(route)] = true
                                         sameHour[savedRoutes.indexOf(route)] = currentRoute[0].hour in route[0].hour-1..route[0].hour+1
                                     }
                                 }
                                 else {
-                                    if (route[0].day == 1 or 6 or 7){
+                                    if (route[0].day == 1 || route[0].day==7){
                                         sameDay[savedRoutes.indexOf(route)] = true
                                         sameHour[savedRoutes.indexOf(route)] = currentRoute[0].hour in route[0].hour - 1..route[0].hour + 1
                                 }
@@ -249,7 +249,7 @@ class LocationTrackerService: Service() {
 
                     }
                 }
-                if(pointsNotFound>20 && !notificationSent && !isSafe && snoozeTime<=0)
+                if(pointsNotFound>30 && !notificationSent && !isSafe && snoozeTime<=0)
                 {
                     notificationManager.notify(2,
                         notificationTwo.setContentText("Are you okay?").build())
@@ -271,14 +271,14 @@ class LocationTrackerService: Service() {
 
                 }
 
-                if(pointsNotSafe>30 && snoozeTime<=0)
+                if(pointsNotSafe>45 && snoozeTime<=0)
                 {
                     sendAlert(thisPoint.latitude,thisPoint.longitude)
                     pointsNotSafe = 0
                     saveRoute = false
                 }
 
-                if (pointsWithoutMoving>30){
+                if (pointsWithoutMoving>45){
                     if (saveRoute){
                         numberOfRoutes++
                         writeRoute(currentRoute.listIterator(),currentRoute[0].time())
