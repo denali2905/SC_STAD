@@ -251,13 +251,15 @@ class LocationTrackerService: Service() {
                 }
 
                 if (notificationSent){
-                    if (isSafe)
+                    if (isSafe || pointsNotFound ==0)
                     {
                         saveRoute = true
                         pointsNotSafe = 0
                         pointsNotFound=0
                         pointFound=true
                         notificationSent = false
+                        isSafe = true
+                        notificationManager.cancel(2)
                     }
                     else
                         pointsNotSafe ++
