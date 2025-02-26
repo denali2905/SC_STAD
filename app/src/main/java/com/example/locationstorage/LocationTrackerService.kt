@@ -151,10 +151,6 @@ class LocationTrackerService: Service() {
             }
         }
 
-        notificationManager.notify(2,
-            notificationTwo.setContentText("Are you okay?").build())
-
-
         scope.launch {
             locationManager.trackLocation().collect {location ->
                 if (sendAlertNow)
