@@ -265,6 +265,7 @@ class LocationTrackerService: Service() {
                         pointFound=true
                         notificationSent = false
                         isSafe = true
+                        notificationManager.cancel(2)
                     }
                     else
                         pointsNotSafe ++
