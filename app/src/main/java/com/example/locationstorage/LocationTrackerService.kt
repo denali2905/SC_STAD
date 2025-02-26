@@ -20,6 +20,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Calendar
+import java.util.Locale
 import java.util.TimeZone
 
 var globalRoute = mutableListOf<RoutePoint>()
@@ -92,10 +93,12 @@ class LocationTrackerService: Service() {
 
         val safeAlertIntent = Intent(this, MyBroadcastReceiver::class.java).apply {
             action = "safe"
+
         }
 
         val notSafeAlertIntent = Intent(this, MyBroadcastReceiver::class.java).apply {
             action = "not safe"
+
         }
 
         val safeAlertPendingIntent:PendingIntent = PendingIntent.getBroadcast(this,0,safeAlertIntent,
@@ -118,7 +121,7 @@ class LocationTrackerService: Service() {
             .setStyle(NotificationCompat.BigTextStyle())
             .addAction(com.google.android.gms.base.R.drawable.common_google_signin_btn_icon_light,"Safe",safeAlertPendingIntent)
             .addAction(com.google.android.gms.base.R.drawable.common_google_signin_btn_icon_light,"Not Safe",notSafeAlertPendingIntent)
-            .setAutoCancel(true)
+
 
 
         startForeground(1, notification.build())
@@ -261,6 +264,7 @@ class LocationTrackerService: Service() {
                         pointsNotFound=0
                         pointFound=true
                         notificationSent = false
+                        notificationManager.cancel(2)
                     }
                     else
                         pointsNotSafe ++
@@ -424,10 +428,12 @@ class LocationTrackerService: Service() {
         val contacts = readEmergencyContacts()
 
         try {
+            val lat = latitude.toBigDecimal()
+            val lon = String.format(Locale.ENGLISH,"%.10f",longitude)
             val smsManager: SmsManager = this.getSystemService(SmsManager::class.java)
             for (contact in contacts) {
                 val message = arrayListOf( "ATTENTION ${contact.name}, I may be in danger...\n Please reach out to me\n",
-                    "I am here -> https://www.google.com/maps/search/?api=1&query=$latitude,$longitude")
+                    "I am here -> https://www.google.com/maps/search/?api=1&query=$lat,$lon")
 
                 smsManager.sendMultipartTextMessage(contact.number,null,message,null,null)
 
