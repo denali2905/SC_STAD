@@ -166,15 +166,9 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf("")
             }
 
-            var linesComposable by remember {
-                mutableStateOf("routeName")
-            }
-
             var emergencyContacts by remember {
                 mutableStateOf("routeName")
             }
-
-            var point by remember { mutableStateOf(Pair(0.0,0.0)) }
 
             Text(text = locationText)
 
@@ -273,15 +267,6 @@ class MainActivity : ComponentActivity() {
 
             Button(
                 onClick = {
-                    chooseRoute()
-                }
-            ) {
-                Text(text = "Start Monitoring")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = {
                     clearLocations()
                 }
             ) {
@@ -312,22 +297,6 @@ class MainActivity : ComponentActivity() {
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(text = routes)
-
-            Button(
-                onClick = {
-                    linesComposable = ""
-                    for (i in 0..<globalLines.size) {
-                        linesComposable += "( ${globalLines[i].lat1.toString()}, ${globalLines[i].lon1.toString()} ) -> (" +
-                                "${globalLines[i].lat2.toString() } , ${globalLines[i].lon2.toString()}) : " +
-                                "${ globalLines[i].m.toString() },${globalLines[i].c.toString()} \n"
-                    }
-                }
-            ) {
-                Text(text = "Print Locations")
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(text = linesComposable)
         }
     }
 
@@ -435,76 +404,10 @@ class MainActivity : ComponentActivity() {
 
         }
 
-    private fun populateRoute(): String{
-//        var tempRoute : Route
-        lateinit var location: RoutePoint
-        lateinit var lastLocation: RoutePoint
-        var newRoute = false
-        var isNotMoving = true
-        applicationContext.openFileInput("result.txt").bufferedReader().forEachLine {
-            val point = it.split(",")
-//                location.longitude = point[0].toDouble()
-//                location.latitude = point[1].toDouble()
-//                location.time = point[2].toLong()
-            val lat = round(point[0].toDouble() * 1000) / 1000
-            val lon = round(point[1].toDouble() * 1000) / 1000
-            location = RoutePoint(lat,lon,point[2].toLong())
-            if (routes.last().isEmpty()) {
-                newRoute=false
-                routes.last().add(location)
-            }
-            else if(isNotMoving && (lastLocation.latitude == location.latitude ||
-                lastLocation.longitude == location.longitude))
-            {
-                routes.last()[0]=location
-            }
-            else if (routes.last().last().latitude != location.latitude ||
-                routes.last().last().longitude != location.longitude
-            ) {
-                routes.last().add(location)
-                isNotMoving = false
-            }
-            else {
-                lastLocation = location
-                isNotMoving = true
-                newRoute = true
-            }
-                if ( newRoute)
-                    routes.add(mutableListOf())
-
-        }
-            var out = ""
-            for (y in routes) {
-                out += "Route ${routes.indexOf(y)}\n"
-                for (x in y) {
-                    out += "[" + x.latitude.toString() + "~" + x.longitude.toString() + "~" + x.timeInUNIX.toString() + "]\n"
-                }
-            }
-            return out
-        }
-    private fun printRoute() : String {
-        var out = ""
-        for (x in globalRoute) {
-                out += "[" + x.latitude.toString() + "~" + x.longitude.toString() + "~" + x.timeInUNIX.toString() + "]\n"
-            }
-
-        return out
-    }
-
-//    private fun CompareRoutes()
-//    {
-//        var tempRoute  = mutableListOf<routePoint>()
-//        var lastRoutePoint: routePoint = Triple(0.0,0.0,0)
-//        applicationContext.openFileInput("newResult.txt").bufferedReader().forEachLine {
-//            val point = it.split(",")}
-//
-//    }
-
     private fun addEmergencyContact(){
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
         val nameInput = EditText(this)
         val phoneNumberInput = EditText(this)
-        var userConfirmation = false
 
         nameInput.inputType = InputType.TYPE_CLASS_TEXT
         nameInput.hint = "Name"
@@ -565,17 +468,10 @@ class MainActivity : ComponentActivity() {
         minutePicker.setPadding(5,10,20,10)
         val dayText = TextView(this)
         dayText.text = "Days: "
-       // dayText.gravity=Gravity.CENTER_VERTICAL
         val hoursText = TextView(this)
         hoursText.text = "Hours: "
-     //   hoursText.setPadding(20,20,10,20)
-        //hoursText.textAlignment = TextView.TEXT_ALIGNMENT_CENTER
-        //hoursText.gravity=Gravity.CENTER_VERTICAL
         val minuteText = TextView(this)
         minuteText.text = "Minutes: "
-        //minuteText.setPadding(20,20,10,20)
-        //minuteText.textAlignment = TextView.TEXT_ALIGNMENT_CENTER
-        //minuteText.gravity=Gravity.CENTER_VERTICAL
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.HORIZONTAL
         layout.addView(dayText)
@@ -584,7 +480,6 @@ class MainActivity : ComponentActivity() {
         layout.addView(hourPicker)
         layout.addView(minuteText)
         layout.addView(minutePicker)
-     //   layout.textAlignment= View.TEXT_ALIGNMENT_CENTER
         layout.gravity = Gravity.CENTER
         builder
             .setTitle("Specify Snooze Time")
@@ -601,73 +496,8 @@ class MainActivity : ComponentActivity() {
         val dialog: AlertDialog = builder.create()
         dialog.show()
     }
-    private fun nameRoute() {
-
-        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
-        val input = EditText(this)
-        var userConfirmation = false
-
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        builder
-            .setTitle("What is this Route?")
-            .setView(input)
-            .setPositiveButton("Confirm") { _,_ ->
 
 
-                applicationContext.openFileOutput("routeNames.txt",Context.MODE_APPEND).use{
-                    it.write("${input.text}\n".toByteArray())
-                }
-                    Intent(
-                        applicationContext, LocationTrackerService::class.java
-                    ).also {
-                        it.action = LocationTrackerService.Action.START.name
-                        startService(it)
-
-                    }
-                applicationContext.openFileOutput("routes.txt",Context.MODE_APPEND).use{
-                    it.write("${input.text}\n".toByteArray())
-                }
-            }
-            .setNegativeButton("Cancel") { dialog, which ->
-
-            }
-
-        val dialog: AlertDialog = builder.create()
-        dialog.show()
-
-
-    }
-    private fun chooseRoute(){
-        val routeNamesRead = mutableListOf<String>()
-        applicationContext.openFileInput("routeNames.txt").bufferedReader().forEachLine {
-            routeNamesRead.add(it)}
-        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
-        builder
-            .setTitle("What is this Route?")
-            .setPositiveButton("Confirm") { _,_ ->
-
-            }
-            .setNegativeButton("Cancel") { dialog, which ->
-
-            }
-            .setItems(routeNamesRead.toTypedArray()){ dialog,which->
-
-                globalRouteName = routeNamesRead[which]
-                val intent = Intent(
-                    applicationContext, LocationTrackerService::class.java
-                )
-                    //intent.putExtra("File Name", routeName[which])
-                    intent.action = LocationTrackerService.Action.MONITOR.name
-                    startService(intent)
-
-
-            }
-
-
-
-        val dialog: AlertDialog = builder.create()
-        dialog.show()
-    }
     }
 
 
