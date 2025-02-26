@@ -159,7 +159,7 @@ class LocationTrackerService: Service() {
             locationManager.trackLocation().collect {location ->
                 if (sendAlertNow)
                 {
-                    sendAlert(location.latitude,location.longitude)
+                    sendAlert(location.latitude,location.longitude,false)
                     sendAlertNow = false
                 }
                 val thisPoint = RoutePoint(location.latitude,location.longitude,location.time)
@@ -251,6 +251,7 @@ class LocationTrackerService: Service() {
                     notificationManager.notify(2,
                         notificationTwo.setContentText("Are you okay?").build())
                     notificationSent = true
+                    sendAlert(thisPoint.latitude,thisPoint.longitude,true)
                 }
 
                 if (notificationSent){
@@ -269,7 +270,7 @@ class LocationTrackerService: Service() {
 
                 if(pointsNotSafe>30 && snoozeTime<=0)
                 {
-                    sendAlert(thisPoint.latitude,thisPoint.longitude)
+                    sendAlert(thisPoint.latitude,thisPoint.longitude,false)
                     pointsNotSafe = 0
                     saveRoute = false
                 }
@@ -420,21 +421,20 @@ class LocationTrackerService: Service() {
         return contacts
     }
 
-    private fun sendAlert(latitude: Double,longitude:Double){
-        val contacts = readEmergencyContacts()
-
+    private fun sendAlert(latitude: Double,longitude:Double,isNotification:Boolean){
         try {
             val smsManager: SmsManager = this.getSystemService(SmsManager::class.java)
-            for (contact in contacts) {
-                val message = arrayListOf( "ATTENTION ${contact.name}, I may be in danger...\n Please reach out to me\n",
-                    "I am here -> https://www.google.com/maps/search/?api=1&query=$latitude,$longitude")
 
-                smsManager.sendMultipartTextMessage(contact.number,null,message,null,null)
+                val message = if (!isNotification) arrayListOf( "ATTENTION Denali, I may be in danger...\n Please reach out to me\n",
+                    "I am here -> https://www.google.com/maps/search/?api=1&query=$latitude,$longitude")
+                else arrayListOf("Notification sent:\n Location -> ","https://www.google.com/maps/search/?api=1&query=$latitude,$longitude")
+
+                smsManager.sendMultipartTextMessage("18687214626",null,message,null,null)
 
 
 
                 //Toast.makeText(this, "Messages sent", Toast.LENGTH_SHORT).show()
-            }
+
         } catch (e: Exception) {
             //Toast.makeText(applicationContext, "Messages failed", Toast.LENGTH_SHORT).show()
         }
