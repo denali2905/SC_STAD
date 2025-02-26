@@ -257,14 +257,14 @@ class LocationTrackerService: Service() {
                 }
 
                 if (notificationSent){
-                    if (isSafe)
+                    if (isSafe || pointsNotFound ==0 )
                     {
                         saveRoute = true
                         pointsNotSafe = 0
                         pointsNotFound=0
                         pointFound=true
                         notificationSent = false
-                        notificationManager.cancel(2)
+                        isSafe = true
                     }
                     else
                         pointsNotSafe ++
@@ -513,46 +513,41 @@ class LocationTrackerService: Service() {
             val c = point.longitude - it.m*point.latitude
             if ((c - it.c)<0.001 && (c - it.c)>-0.001)
             {
-                if((point.latitude in it.lat1-0.0015..it.lat2+0.0015) || (point.latitude in it.lat2-0.0015..it.lat1+0.0015))
-                    if ((point.longitude in it.lon1-0.0015..it.lon2+0.0015) || (point.longitude in it.lon2-0.0015..it.lon1+0.0015))
-                        if(sameRouteStartHour) {
-                            if ((point.timeInUNIX - routeStartTime+routeError[routeIndex]) in it.timeFromStart - 900000..it.timeFromStart + 900000) {
-                                routeError[routeIndex]= ((it.timeFromStart-(point.timeInUNIX-routeStartTime))/60000).toInt()
+                if((point.latitude in it.lat1-0.0015..it.lat2+0.0015) || (point.latitude in it.lat2-0.0015..it.lat1+0.0015)) {
+                    if ((point.longitude in it.lon1 - 0.0015..it.lon2 + 0.0015) || (point.longitude in it.lon2 - 0.0015..it.lon1 + 0.0015)) {
+                        if (it.timeInMinutes + routeError[routeIndex] in 15..1424) {
+                            if (point.timeInMinutes in it.timeInMinutes - 15..it.timeInMinutes + 15) {
+                                routeError[routeIndex] = it.timeInMinutes - point.timeInMinutes
+                                return true
+                            }
+                        } else if (it.timeInMinutes < 15) {
+                            if ((point.timeInMinutes + routeError[routeIndex] in (it.timeInMinutes - 15 + 1440)..1439)) {
+                                routeError[routeIndex] =
+                                    it.timeInMinutes - point.timeInMinutes + 1440
+                                return true
+                            } else if ((point.timeInMinutes + routeError[routeIndex] in 0..it.timeInMinutes + 15)) {
+                                routeError[routeIndex] = it.timeInMinutes - point.timeInMinutes
+                                return true
+                            }
+                        } else {
+                            if ((point.timeInMinutes in it.timeInMinutes - 15..1439)) {
+                                routeError[routeIndex] = it.timeInMinutes - point.timeInMinutes
+                                return true
+                            } else if ((point.timeInMinutes in 0..(it.timeInMinutes + 15) % 1440)) {
+                                routeError[routeIndex] =
+                                    it.timeInMinutes - point.timeInMinutes - 1440
                                 return true
                             }
                         }
-                        if (it.timeInMinutes+routeError[routeIndex] in 15..1424) {
-                            if (point.timeInMinutes in it.timeInMinutes - 15..it.timeInMinutes + 15){
-                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes
+                        if (sameRouteStartHour) {
+                            if ((point.timeInUNIX - routeStartTime + routeError[routeIndex]) in it.timeFromStart - 900000..it.timeFromStart + 900000) {
+                                routeError[routeIndex] =
+                                    ((it.timeFromStart - (point.timeInUNIX - routeStartTime)) / 60000).toInt()
                                 return true
                             }
                         }
-                        else if(it.timeInMinutes<15)
-                        {
-                            if ((point.timeInMinutes+routeError[routeIndex] in (it.timeInMinutes - 15+1440)..1439))
-                            {
-                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes+1440
-                                return true
-                            }
-                            else if((point.timeInMinutes+routeError[routeIndex] in 0..it.timeInMinutes + 15))
-                            {
-                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes
-                                return true
-                            }
-                        }
-                        else
-                        {
-                            if ((point.timeInMinutes in it.timeInMinutes - 15..1439) )
-                            {
-                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes
-                                return true
-                            }
-                            else if((point.timeInMinutes in 0..(it.timeInMinutes + 15)%1440))
-                            {
-                                routeError[routeIndex]=it.timeInMinutes-point.timeInMinutes-1440
-                                return true
-                            }
-                        }
+                    }
+                }
 
             }
         }
