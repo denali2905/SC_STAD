@@ -229,6 +229,7 @@ class LocationTrackerService: Service() {
                     else {
                         currentRoute.add(thisPoint)
                         pointsWithoutMoving = 0
+                        pointFound = false
                         if (savedRoutes.isNotEmpty()) {
                             for (i in 0..<savedRoutes.size) {
                                 if (sameDay[i]) {
@@ -243,7 +244,7 @@ class LocationTrackerService: Service() {
                                 pointsNotFound++
                             else {
                                 pointsNotFound = 0
-                                pointFound = false
+
                             }
                         }
 
