@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.location.LocationManagerCompat.isLocationEnabled
 import com.example.locationstorage.ui.theme.LocationStorageTheme
+import com.example.locationstorage.ui.theme.isSafe
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
@@ -242,6 +243,7 @@ class MainActivity : ComponentActivity() {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(text = emergencyContacts)
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
@@ -268,6 +270,17 @@ class MainActivity : ComponentActivity() {
                 }
             ) {
                 Text(text = "Snooze Alerts")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    isSafe = true
+                    Toast.makeText(applicationContext, "Nice to hear.", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            ) {
+                Text(text = "I am Safe")
             }
             Spacer(modifier = Modifier.height(16.dp))
 

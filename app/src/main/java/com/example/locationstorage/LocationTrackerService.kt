@@ -93,13 +93,13 @@ class LocationTrackerService: Service() {
 
         val safeAlertIntent = Intent(this, MyBroadcastReceiver::class.java).apply {
             action = "safe"
-
         }
 
         val notSafeAlertIntent = Intent(this, MyBroadcastReceiver::class.java).apply {
             action = "not safe"
-
         }
+
+        val openAppIntent = Intent(this,MainActivity::class.java)
 
         val safeAlertPendingIntent:PendingIntent = PendingIntent.getBroadcast(this,0,safeAlertIntent,
             PendingIntent.FLAG_IMMUTABLE)
@@ -107,11 +107,14 @@ class LocationTrackerService: Service() {
         val notSafeAlertPendingIntent:PendingIntent = PendingIntent.getBroadcast(this,0,notSafeAlertIntent,
             PendingIntent.FLAG_IMMUTABLE)
 
+        val openAppPendingIntent = PendingIntent.getActivity(this,0,openAppIntent,PendingIntent.FLAG_IMMUTABLE)
+
         val notification = NotificationCompat
             .Builder(this, LOCATION_CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Location Tracker")
             .setStyle(NotificationCompat.BigTextStyle())
+            .setContentIntent(openAppPendingIntent)
             .addAction(com.google.android.gms.base.R.drawable.common_google_signin_btn_icon_light,"Not Safe",notSafeAlertPendingIntent)
 
         val notificationTwo = NotificationCompat
@@ -119,6 +122,7 @@ class LocationTrackerService: Service() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Position Alert")
             .setStyle(NotificationCompat.BigTextStyle())
+            .setContentIntent(openAppPendingIntent)
             .addAction(com.google.android.gms.base.R.drawable.common_google_signin_btn_icon_light,"Safe",safeAlertPendingIntent)
             .addAction(com.google.android.gms.base.R.drawable.common_google_signin_btn_icon_light,"Not Safe",notSafeAlertPendingIntent)
 
@@ -165,6 +169,8 @@ class LocationTrackerService: Service() {
                     sendAlert(location.latitude,location.longitude)
                     sendAlertNow = false
                 }
+                if(snoozeTime>0)
+                    snoozeTime--
                 val thisPoint = RoutePoint(location.latitude,location.longitude,location.time)
                 if (!thisPoint.isEqualTo(lastPoint)) {
                     applicationContext.openFileOutput("main.txt", Context.MODE_APPEND).use {
