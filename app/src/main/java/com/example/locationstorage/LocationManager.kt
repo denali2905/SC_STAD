@@ -8,6 +8,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -29,7 +30,6 @@ class LocationManager (
             .addOnSuccessListener { location ->
                 val lat = location.latitude.toString()
                 val lon = location.longitude.toString()
-
                 onSuccess(lat,lon)
             }
     }
@@ -43,6 +43,7 @@ class LocationManager (
             }
             val request = LocationRequest
                 .Builder(20000)
+                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
                 .build()
 
             fusedLocationClient.requestLocationUpdates(
