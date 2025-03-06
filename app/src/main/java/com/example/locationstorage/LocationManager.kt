@@ -8,6 +8,10 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationToken
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.gms.tasks.OnTokenCanceledListener
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -30,6 +34,19 @@ class LocationManager (
                 val lat = location.latitude.toString()
                 val lon = location.longitude.toString()
 
+                onSuccess(lat,lon)
+            }
+    }
+
+    fun getGPSLocation(onSuccess: (lat: String, lon: String) -> Unit)
+    {
+
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, object : CancellationToken() {
+            override fun onCanceledRequested(p0: OnTokenCanceledListener) = CancellationTokenSource().token
+            override fun isCancellationRequested() = false })
+            .addOnSuccessListener { location ->
+                val lat = location.latitude.toString()
+                val lon = location.longitude.toString()
                 onSuccess(lat,lon)
             }
     }
