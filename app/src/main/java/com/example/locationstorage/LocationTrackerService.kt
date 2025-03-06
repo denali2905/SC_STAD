@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.locationstorage.ui.theme.MyBroadcastReceiver
 import com.example.locationstorage.ui.theme.isSafe
+import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -166,7 +167,7 @@ class LocationTrackerService: Service() {
             locationManager.trackLocation().collect {location ->
                 if (sendAlertNow)
                 {
-                    sendAlert(location.latitude,location.longitude)
+                    sendAlert()
                     sendAlertNow = false
                 }
                 if(snoozeTime>0)
@@ -281,7 +282,7 @@ class LocationTrackerService: Service() {
 
                 if(pointsNotSafe>45 && snoozeTime<=0)
                 {
-                    sendAlert(thisPoint.latitude,thisPoint.longitude)
+                    sendAlert()
                     pointsNotSafe = 0
                     saveRoute = false
                 }
@@ -432,25 +433,27 @@ class LocationTrackerService: Service() {
         return contacts
     }
 
-    private fun sendAlert(latitude: Double,longitude:Double){
+    private fun sendAlert(){
         val contacts = readEmergencyContacts()
+        val locationManager = LocationManager(applicationContext)
+        locationManager.getGPSLocation() { lat, lon ->
+            try {
 
-        try {
-            val lat = latitude.toBigDecimal()
-            val lon = String.format(Locale.ENGLISH,"%.10f",longitude)
-            val smsManager: SmsManager = this.getSystemService(SmsManager::class.java)
-            for (contact in contacts) {
-                val message = arrayListOf( "ATTENTION ${contact.name}, I may be in danger...\n Please reach out to me\n",
-                    "I am here -> https://www.google.com/maps/search/?api=1&query=$lat,$lon")
+                val smsManager: SmsManager = this.getSystemService(SmsManager::class.java)
+                for (contact in contacts) {
+                    val message = arrayListOf(
+                        "ATTENTION ${contact.name}, I may be in danger...\n Please reach out to me\n",
+                        "I am here -> https://www.google.com/maps/search/?api=1&query=$lat,$lon"
+                    )
 
-                smsManager.sendMultipartTextMessage(contact.number,null,message,null,null)
-
+                    smsManager.sendMultipartTextMessage(contact.number, null, message, null, null)
 
 
-                //Toast.makeText(this, "Messages sent", Toast.LENGTH_SHORT).show()
+                    //Toast.makeText(this, "Messages sent", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                //Toast.makeText(applicationContext, "Messages failed", Toast.LENGTH_SHORT).show()
             }
-        } catch (e: Exception) {
-            //Toast.makeText(applicationContext, "Messages failed", Toast.LENGTH_SHORT).show()
         }
 
     }

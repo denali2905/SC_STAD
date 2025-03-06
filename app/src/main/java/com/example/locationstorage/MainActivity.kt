@@ -408,7 +408,9 @@ class MainActivity : ComponentActivity() {
         val smsManager: SmsManager = this.getSystemService(SmsManager::class.java)
         val contacts = readEmergencyContacts()
 
-        locationManager.getLocation {lat, lon ->
+
+
+        locationManager.getGPSLocation() {lat, lon ->
                 for (contact in contacts) {
                     val message = arrayListOf( "ATTENTION ${contact.name}, I may be in danger...\n Please reach out to me\n",
                      "I am here -> https://www.google.com/maps/search/?api=1&query=$lat,$lon")
