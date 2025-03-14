@@ -544,7 +544,7 @@ class LocationTrackerService: Service() {
                             if (((point.timeInMinutes + routeError[routeIndex])%1439 in it.timeInMinutes - 15..1439)) {
                                 routeError[routeIndex] = it.timeInMinutes - point.timeInMinutes
                                 return true
-                            } else if (((point.timeInMinutes + routeError[routeIndex])%1439 in 0..(it.timeInMinutes + 15) % 1440)) {
+                            } else if (((point.timeInMinutes + routeError[routeIndex])%1439 in 0..(it.timeInMinutes + 15) % 1439)) {
                                 routeError[routeIndex] =
                                     it.timeInMinutes - point.timeInMinutes - 1440
                                 return true
