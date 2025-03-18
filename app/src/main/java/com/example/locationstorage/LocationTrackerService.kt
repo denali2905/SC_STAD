@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Bundle
 import android.os.IBinder
 import android.telephony.SmsManager
@@ -126,7 +127,7 @@ class LocationTrackerService: Service() {
             .setAutoCancel(true)
 
 
-        startForeground(1, notification.build())
+        startForeground(1, notification.build(),ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
         var lastPoint = RoutePoint(0.0,0.0,0)
         var currentRoute = mutableListOf<RoutePoint>()
         var pointsWithoutMoving = 0
