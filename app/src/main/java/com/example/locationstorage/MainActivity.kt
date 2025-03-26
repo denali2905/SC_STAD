@@ -109,6 +109,14 @@ class MainActivity : ComponentActivity() {
 
             }
             when{
+                permissions.getOrDefault(Manifest.permission.ACCESS_BACKGROUND_LOCATION, false)
+                    -> { Toast.makeText(this, "Background access granted", Toast.LENGTH_SHORT).show() }
+                else -> {
+                    Toast.makeText(this, "No Background access", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            when{
                 permissions.getOrDefault(Manifest.permission.POST_NOTIFICATIONS, false)
                         -> { Toast.makeText(this, "Notification access granted", Toast.LENGTH_SHORT).show() }
                 else -> {
@@ -133,6 +141,7 @@ class MainActivity : ComponentActivity() {
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
                 Manifest.permission.POST_NOTIFICATIONS,
                 Manifest.permission.SEND_SMS
             )
