@@ -61,6 +61,7 @@ class LocationManager (
             val request = LocationRequest
                 .Builder(20000)
                 .setPriority(Priority.PRIORITY_BALANCED_POWER_ACCURACY)
+                .setMaxUpdateDelayMillis(3*3*20000)
                 .build()
 
             fusedLocationClient.requestLocationUpdates(
