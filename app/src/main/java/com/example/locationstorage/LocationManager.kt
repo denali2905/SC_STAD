@@ -59,6 +59,7 @@ class LocationManager (
             }
             val request = LocationRequest
                 .Builder(20000)
+                .setMaxUpdateDelayMillis(3*3*20000)
                 .build()
 
             fusedLocationClient.requestLocationUpdates(
