@@ -80,8 +80,7 @@ class LocationTrackerService: Service() {
             Action.STOP.name -> stop()
             Action.MONITOR.name -> startMonitoring()
         }
-        bundle = intent?.extras
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     private fun start() {
